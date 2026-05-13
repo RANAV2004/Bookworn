@@ -1,0 +1,22 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100vh;
+  background: #f5ebd8;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide Watson's own button — we use our custom widget */
+#WACLauncher__outer,
+[id^="WACLauncher"],
+.WACLauncher__ButtonFrame {
+  display: none !important;
+}
