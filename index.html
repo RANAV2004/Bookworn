@@ -19,17 +19,9 @@
           await instance.render();
           window.watsonInstance = instance;
           console.log("✅ Watson ready!");
-          instance.on({
-            type: "receive",
-            handler: (event) => {
-              const responses = event.data?.output?.generic || [];
-              responses.forEach((item) => {
-                if (item.response_type === "text" && window.watsonResponseHandler) {
-                  window.watsonResponseHandler(item.text);
-                }
-              });
-            },
-          });
+          // Hide the "Ask the Librarian" button while IBM's chat window is open
+          instance.on({ type: "window:open", handler: () => document.body.classList.add("watson-open") });
+          instance.on({ type: "window:close", handler: () => document.body.classList.remove("watson-open") });
         },
       };
       setTimeout(function () {

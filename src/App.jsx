@@ -1,10 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { BookOpen, Sparkles, Send, X, MessageCircle, Quote, Coffee, Bookmark } from 'lucide-react';
-
-// ─────────────────────────────────────────────────────────
-//  BOOKWORM — A Cozy Book Recommendation Site
-//  Designed to embed an IBM Watson Assistant chatbot
-// ─────────────────────────────────────────────────────────
+import { useState, useEffect } from 'react';
+import { BookOpen, Sparkles, X, MessageCircle, Quote, Coffee, Bookmark, LogOut } from 'lucide-react';
+import WeatherCard, { weatherCardStyles } from './WeatherCard.jsx';
 
 const FEATURED_BOOKS = [
   {
@@ -182,21 +178,10 @@ const FEATURED_BOOKS = [
   },
 ];
 
-// Helper: Open Library cover URL by ISBN, with default=false so missing covers
-// 404 cleanly and our onError fallback kicks in to show the CSS-rendered cover.
 const coverUrlForISBN = (isbn) =>
   isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false` : null;
 
-const STARTER_PROMPTS = [
-  'I loved The Secret History — what next?',
-  'Something cozy for a rainy afternoon',
-  'A literary thriller, please',
-  'Surprise me with something weird',
-];
 
-// ─────────────────────────────────────────────────────────
-//  BOOK COVER — real cover image with CSS-rendered fallback
-// ─────────────────────────────────────────────────────────
 function BookCover({ book }) {
   const { palette, title, author, style } = book;
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -275,114 +260,32 @@ function BookCover({ book }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  CHAT WIDGET — Mock UI that mirrors Watson Assistant
-//  Replace the demo logic with the real Watson embed (see notes)
-// ─────────────────────────────────────────────────────────
-function ChatWidget() {
-  const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { from: 'bot', text: 'Hello! I\'m the Bookworm Librarian. Tell me a book you loved, a mood, or a genre — I\'ll find you something good.' },
-  ]);
-  const [input, setInput] = useState('');
-  const scrollRef = useRef(null);
 
-  // Poll every second until Watson is ready, then send any queued message
-  const pendingMsg = useRef(null);
-  useEffect(() => {
-    const poll = setInterval(() => {
-      if (window.watsonInstance) {
-        clearInterval(poll);
-        if (pendingMsg.current) {
-          window.watsonInstance.send({ input: { text: pendingMsg.current } });
-          pendingMsg.current = null;
-        }
-      }
-    }, 1000);
-    return () => clearInterval(poll);
-  }, []);
-
-  // Register Watson response handler so index.html can pass replies into React state
-  useEffect(() => {
-    window.watsonResponseHandler = (text) => {
-      setMessages((m) => [...m, { from: 'bot', text }]);
-    };
-    return () => { window.watsonResponseHandler = null; };
-  }, []);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, open]);
-
-  const send = (text) => {
-    const msg = (text || input).trim();
-    if (!msg) return;
-    setMessages((m) => [...m, { from: 'user', text: msg }]);
-    setInput('');
-    if (window.watsonInstance) {
-      window.watsonInstance.send({ input: { text: msg } });
-    } else {
-      pendingMsg.current = msg;
-      setMessages((m) => [...m, {
-        from: 'bot',
-        text: '📚 Connecting to the library... your message will be sent in a moment!',
-      }]);
+function openLibrarian() {
+  const tryOpen = (attempts = 0) => {
+    const w = window.watsonInstance;
+    if (w) {
+      if (typeof w.openWindow === 'function') w.openWindow();
+      else if (typeof w.changeView === 'function') w.changeView('mainWindow');
+      else w.toggleOpen?.();
+    } else if (attempts < 20) {
+      // Watson still loading — try again shortly
+      setTimeout(() => tryOpen(attempts + 1), 500);
     }
   };
+  tryOpen();
+}
 
+function LibrarianButton() {
   return (
-    <>
-      <button
-        className={`chat-fab ${open ? 'is-open' : ''}`}
-        onClick={() => setOpen(!open)}
-        aria-label={open ? 'Close librarian chat' : 'Open librarian chat'}
-      >
-        {open ? <X size={22} /> : <MessageCircle size={22} />}
-        {!open && <span className="chat-fab-label">Ask the Librarian</span>}
-      </button>
-
-      <div className={`chat-panel ${open ? 'is-open' : ''}`}>
-        <div className="chat-header">
-          <div className="chat-header-icon"><BookOpen size={18} /></div>
-          <div>
-            <div className="chat-title">The Librarian</div>
-            <div className="chat-subtitle">always reading · always here</div>
-          </div>
-        </div>
-        <div className="chat-messages" ref={scrollRef}>
-          {messages.map((m, i) => (
-            <div key={i} className={`chat-msg chat-msg-${m.from}`}>{m.text}</div>
-          ))}
-          {messages.length === 1 && (
-            <div className="chat-suggestions">
-              {STARTER_PROMPTS.map((p) => (
-                <button key={p} className="chat-suggestion" onClick={() => send(p)}>{p}</button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="chat-input-row">
-          <input
-            className="chat-input"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && send()}
-            placeholder="Tell me what you're in the mood for…"
-          />
-          <button className="chat-send" onClick={() => send()} aria-label="Send">
-            <Send size={16} />
-          </button>
-        </div>
-      </div>
-    </>
+    <button className="chat-fab" onClick={openLibrarian} aria-label="Open librarian chat">
+      <MessageCircle size={22} />
+      <span className="chat-fab-label">Ask the Librarian</span>
+    </button>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  SERIES MODAL — opens when a book with a series is clicked
-// ─────────────────────────────────────────────────────────
+
 function MiniSeriesCover({ part }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
@@ -459,11 +362,11 @@ function SeriesModal({ book, onClose }) {
 // ─────────────────────────────────────────────────────────
 //  MAIN
 // ─────────────────────────────────────────────────────────
-export default function App() {
+export default function App({ user, onLogout }) {
   const [openSeries, setOpenSeries] = useState(null);
   return (
     <div className="bookworm-app">
-      <style>{styles}</style>
+      <style>{styles + weatherCardStyles}</style>
 
       {/* NAV */}
       <nav className="nav">
@@ -479,10 +382,16 @@ export default function App() {
           </ul>
           <a href="#chat" className="nav-cta" onClick={(e) => {
             e.preventDefault();
-            document.querySelector('.chat-fab')?.click();
+            openLibrarian();
           }}>
             <Sparkles size={14} /> Ask the Librarian
           </a>
+          {user && (
+            <button className="nav-logout" onClick={onLogout} title="Log out">
+              <span>Hi, {user.name.split(' ')[0]}</span>
+              <LogOut size={14} />
+            </button>
+          )}
         </div>
       </nav>
 
@@ -501,7 +410,7 @@ export default function App() {
             to what you love, and points you toward something new.
           </p>
           <div className="hero-cta-row">
-            <button className="cta-primary" onClick={() => document.querySelector('.chat-fab')?.click()}>
+            <button className="cta-primary" onClick={openLibrarian}>
               Start a conversation
               <span className="cta-arrow">→</span>
             </button>
@@ -509,6 +418,7 @@ export default function App() {
           </div>
           <div className="hero-ornament" aria-hidden="true">❦</div>
         </div>
+        {user && <WeatherCard city={user.city} country={user.country} />}
       </header>
 
       {/* QUOTE STRIP */}
@@ -520,7 +430,7 @@ export default function App() {
         </p>
       </section>
 
-      {/* FEATURED SHELF */}
+      
       <section id="shelf" className="shelf">
         <div className="section-head">
           <div className="section-eyebrow"> 01 · The Shelf</div>
@@ -558,7 +468,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
+      
       <section id="how" className="how">
         <div className="section-head">
           <div className="section-eyebrow"> 02 · How it works</div>
@@ -586,7 +496,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* ABOUT */}
+      
       <section id="about" className="about">
         <div className="about-inner">
           <div className="about-text">
@@ -615,7 +525,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* FOOTER */}
+     
       <footer className="footer">
         <div className="footer-inner">
           <div className="footer-brand">
@@ -627,15 +537,13 @@ export default function App() {
         </div>
       </footer>
 
-      <ChatWidget />
+      <LibrarianButton />
       {openSeries && <SeriesModal book={openSeries} onClose={() => setOpenSeries(null)} />}
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────
-//  STYLES
-// ─────────────────────────────────────────────────────────
+
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=DM+Mono:wght@400;500&display=swap');
 
@@ -714,6 +622,15 @@ a { color: inherit; text-decoration: none; }
   letter-spacing: 0.12em;
 }
 .nav-links a:hover { color: var(--wine); }
+.nav-logout {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer;
+  font-family: 'DM Mono', monospace; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.14em;
+  color: var(--ink-soft);
+}
+.nav-logout:hover { color: var(--wine); }
+@media (max-width: 640px) { .nav-logout span { display: none; } }
 .nav-cta {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 18px;
