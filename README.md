@@ -2,7 +2,7 @@
 
 A cozy book recommendation website with an AI librarian, powered by **IBM watsonx Assistant**, plus a live weather card from my other project, **[Cloudy](https://github.com/RANAV2004/CLOUDY)**.
 
-**Live demo:** _add your Render link here_
+**Live demo:** (https://bookworn.onrender.com/)
 
 ---
 
