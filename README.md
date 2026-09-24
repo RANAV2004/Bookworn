@@ -24,8 +24,7 @@ A cozy book recommendation website with an AI librarian, powered by **IBM watson
 
 | Part | Technology |
 |---|---|
-| Frontend | React 19 + Vite |
-| Icons | lucide-react |
+| Frontend | React + Vite |
 | Chatbot | IBM watsonx Assistant (web chat) |
 | Weather data | OpenWeatherMap API |
 | Weather dashboard | Cloudy (React + Vite) |
